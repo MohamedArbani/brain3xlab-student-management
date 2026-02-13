@@ -68,17 +68,22 @@ const getAccessControlByIds = async (ids, client) => {
     return rows;
 }
 
-const insertPermissionForRoleId = async (queryParams, client) => {
+const insertPermissionForRoleId = async (permissions, client) => {
+    const placeholders = permissions.map((_, i) => {
+        const offset = i * 3;
+        return `($${offset + 1}, $${offset + 2}, $${offset + 3})`;
+    }).join(', ');
     const query = `
         INSERT INTO permissions(role_id, access_control_id, type)
-        VALUES ${queryParams}
+        VALUES ${placeholders}
         ON CONFLICT (role_id, access_control_id) DO NOTHING
     `;
-    await client.query(query);
+    const values = permissions.flatMap(p => [p.roleId, p.id, p.type]);
+    await client.query(query, values);
 }
 const deletePermissionForRoleId = async (roleId, client) => {
-    const query = `DELETE FROM permissions WHERE role_id = ${roleId}`;
-    await client.query(query);
+    const query = `DELETE FROM permissions WHERE role_id = $1`;
+    await client.query(query, [roleId]);
 }
 
 const getPermissionsById = async (roleId) => {
